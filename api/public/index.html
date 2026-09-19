@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IARE Placement Agent</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 600px; margin: 40px auto; padding: 20px; background-color: #f4f4f9; }
+        #chatbox { height: 400px; overflow-y: auto; background: white; padding: 15px; border-radius: 8px; border: 1px solid #ccc; margin-bottom: 10px; }
+        .msg { margin-bottom: 10px; padding: 8px 12px; border-radius: 6px; }
+        .user { background: #007bff; color: white; text-align: right; margin-left: 20%; }
+        .agent { background: #e9ecef; color: black; margin-right: 20%; }
+        input, button { padding: 10px; font-size: 16px; border-radius: 5px; border: 1px solid #ccc; }
+        input { width: 75%; }
+        button { width: 20%; background: #28a745; color: white; border: none; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h2>🎓 IARE Placement Agent</h2>
+    <div id="chatbox"></div>
+    <div style="display: flex; gap: 10px;">
+        <input type="text" id="query" placeholder="Ask about 2026 drives, CGPA cutoffs, etc..." onkeypress="if(event.key === 'Enter') sendQuery()">
+        <button onclick="sendQuery()">Ask</button>
+    </div>
+
+    <script>
+        async function sendQuery() {
+            const input = document.getElementById("query");
+            const chatbox = document.getElementById("chatbox");
+            if (!input.value.trim()) return;
+
+            // Display user message
+            chatbox.innerHTML += `<div class="msg user">${input.value}</div>`;
+            const userText = input.value;
+            input.value = "";
+            chatbox.scrollTop = chatbox.scrollHeight;
+
+            // Fetch AI Response
+            chatbox.innerHTML += `<div class="msg agent" id="loading">Thinking...</div>`;
+            const res = await fetch("/api/chat", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ query: userText })
+            });
+            const data = await res.json();
+            
+            // Remove loading and show answer
+            document.getElementById("loading").remove();
+            chatbox.innerHTML += `<div class="msg agent">${data.answer.replace(/\n/g, '<br>')}</div>`;
+            chatbox.scrollTop = chatbox.scrollHeight;
+        }
+    </script>
+</body>
+</html>
