@@ -1,0 +1,166 @@
+import os
+from langchain_core.documents import Document
+from langchain_chroma import Chroma
+from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI
+from langchain.agents import create_tool_calling_agent, AgentExecutor
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.tools import tool
+
+# Set your API key
+os.environ["GOOGLE_API_KEY"] = "YOUR_GEMINI_API_KEY"
+
+# 1. Comprehensive placement data from all 10 campus drives
+placement_docs = [
+    Document(
+        page_content="""Company: Accenture
+Hiring Batch: 2025 Batch
+Job Role: Associate Software Engineer / Advanced Associate Software Engineer
+Salary: ₹4.5 - 6.5 LPA
+Date of Recruitment: 26-28 September 2024
+Eligibility: B.Tech, No Active Backlogs, Branches: CSE, IT, CSIT, CSE(AI&ML), CSE(DS), CSE(CS), ECE, EEE, AERO, MECH, CIVIL.
+Process: Stage 1: Cognitive & Technical Ability, Stage 2: Coding Assessment, Stage 3: Communication Assessment, Stage 4: Technical Interview.
+About: Global professional services firm offering strategy, consulting, digital, and operations.""",
+        metadata={"company": "Accenture", "batch": "2025", "min_salary": 4.5, "max_salary": 6.5}
+    ),
+    Document(
+        page_content="""Company: UTS (Unistring Tech Solutions)
+Hiring Batch: 2025 Batch
+Job Role: Jr. Hardware Design Engineer
+Salary: ₹5.0 LPA
+Date of Recruitment: 05 September 2024
+Eligibility: B.Tech - ECE & EEE, No Active Backlogs, 60% in SSC, Inter & UG.
+Process: Pre-placement talk, Round 1: Online test, Round 2: Group Discussion, Round 3: Technical Interview.
+Responsibilities & Skills: Developing and reviewing electrical schematics, analyzing circuit functionality, bill of materials, circuit simulators. Strong background in Digital and RF concepts and PCB schematic layout.""",
+        metadata={"company": "UTS", "batch": "2025", "min_salary": 5.0, "max_salary": 5.0}
+    ),
+    Document(
+        page_content="""Company: Bounteous x Accolite (sheCODEs)
+Hiring Batch: 2025 Batch (Exclusive for female students)
+Job Role: Software Engineer
+Salary: ₹6.0 LPA
+Date of Recruitment: 1st Week November 2024
+Eligibility: SSC & Inter 60%, 6 CGPA & Above in UG, No Active Backlogs, Circuit Branches.
+Process: Stage 1: Online Assessment (MCQ + Coding), Stage 2: Technical / HR Interview.
+Responsibilities: SDLC analysis to deployment, maintain coding standards, flowcharts, testing, debugging, and code maintenance.""",
+        metadata={"company": "Bounteous x Accolite", "batch": "2025", "min_salary": 6.0, "max_salary": 6.0}
+    ),
+    Document(
+        page_content="""Company: Goldman Sachs (MNC's Insights Series)
+Target Candidates: Final-year students (B.Tech / M.Tech) for Full-time; Pre-final year students for Internships.
+Job Roles: Software Engineer / Developer, Data Engineer / Analyst, DevOps / SRE, Cybersecurity Analyst.
+Salary / CTC Offering: ₹30 LPA
+Hiring Timeline: Internships: August - September; ECHP: January - March; Joining: May (Interns), July (Full-time).
+Process: Online Assessment (Coding + Aptitude), Technical & HR Interviews, Resume & Project Evaluation.
+Tech Stack & Platforms: Java, Python, Go, Scala, C++, AWS, Docker, Kubernetes, Spark, Hadoop, Kafka, React, Angular, Marquee, Marcus, SecDB.""",
+        metadata={"company": "Goldman Sachs", "batch": "Final/Pre-final", "min_salary": 30.0, "max_salary": 30.0}
+    ),
+    Document(
+        page_content="""Company: ZeroCodeHR
+Hiring Batch: 2027 Passout
+Job Role: Implementation Analyst
+Compensation: Salary ₹9 LPA; Intern Stipend: ₹32,000/- PM
+Date of Recruitment: 17 March 2026
+Eligibility: 60% in SSC & Inter, 8.0 and above CGPA in UG, No Active Backlogs. Branches: CSE, CSE (AI & ML), CSE (DS), CSE(CS), IT. Limited to only 400 students based on CGPA.
+Process: Stage 1: Aptitude assessment, Stage 2: Group Discussion, Stage 3: Technical Interview, Stage 4: Cultural Fit round.
+Responsibilities: Customer requirement gathering, product configuration, SQL queries/reporting, QA test planning, and defect verification.""",
+        metadata={"company": "ZeroCodeHR", "batch": "2027", "min_salary": 9.0, "max_salary": 9.0}
+    ),
+    Document(
+        page_content="""Company: IBM Technology Experts Labs
+Hiring Batch: 2025 Batch
+Job Role: Delivery Consultant
+Compensation: Salary ₹9 LPA; Intern Stipend: ₹30,000/- PM
+Date of Recruitment: 14 February 2025
+Eligibility: B.Tech, 7 CGPA & Above in UG, No Active Backlogs. Branches: CSE, IT, CSIT, CSE(AI&ML), CSE (DS), CSE(CS).
+Process: Online Registration, Pre-Placement Talk, Online Assessment, Face-to-Face TR / HR Interviews.
+Responsibilities: Software delivery, customization, consulting on IBM Data & AI, automation, cloud, and hybrid infrastructure.""",
+        metadata={"company": "IBM", "batch": "2025", "min_salary": 9.0, "max_salary": 9.0}
+    ),
+    Document(
+        page_content="""Company: JUSPAY
+Hiring Batch: 2026 Batch
+Job Role: System Reliability Engineer (SRE)
+Compensation: Salary ₹11.0 LPA; Intern Stipend: ₹30K Per Month
+Date of Recruitment: Last week of November 2025
+Eligibility: 70% in SSC & Inter, 7.5 CGPA & Above in UG, No Active Backlogs, All Branches eligible.
+Process: Stage 1: Coding Assessment, Stage 2: Hackathon, Stage 3: Technical Interview.
+Job Details: Distributed systems design, pure functional programming (Haskell), Chaos Engineering, DBMesh database management.""",
+        metadata={"company": "Juspay", "batch": "2026", "min_salary": 11.0, "max_salary": 11.0}
+    ),
+    Document(
+        page_content="""Company: Cognizant
+Hiring Batch: 2027 Passout
+Job Role: JAVA Full-Stack Engineer
+Salary: ₹6.75 LPA
+Registration Window: 11 - 18 May 2026
+Eligibility: 60% in SSC and Inter, 6.5 and above CGPA, No Active Backlogs. Branches: CSE, CSE (AI & ML), CSE (DS), CSE(CS), IT, ECE.
+Process: Communication Assessment, Aptitude & Coding Assessment, Technical Interviews.
+Prerequisites: Java, OOPs, MySQL, JDBC, JUnit, Mockito, Spring REST, Spring Boot, HTML5, CSS3, JavaScript.""",
+        metadata={"company": "Cognizant", "batch": "2027", "min_salary": 6.75, "max_salary": 6.75}
+    ),
+    Document(
+        page_content="""Company: TATA Technologies
+Hiring Batch: 2026 Batch
+Job Role: GET / PGET (Graduate Engineer Trainee / Post Graduate Engineer Trainee)
+Salary: ₹4.5 - 5.75 LPA
+Date of Recruitment: 29 September 2025 (Tentative)
+Eligibility: 60% or 6.5 CGPA Throughout, No Active Backlogs, B.Tech - AERO, M.Tech - AEROSPACE (One year academic gap allowed).
+Process: Aptitude Test, Technical Interview, HR Round.
+Responsibilities: RPA, MPMLink, Thingworxs, C#, Java, VBScript, UiPath/BluePrism, reporting and charting.""",
+        metadata={"company": "TATA Technologies", "batch": "2026", "min_salary": 4.5, "max_salary": 5.75}
+    ),
+    Document(
+        page_content="""Company: Namma Yatri
+Hiring Batch: 2026 Batch
+Job Roles: Data Analyst (₹10 LPA) & Quality Engineer / SDET (₹9 LPA)
+Compensation: Intern Stipend: ₹30K - 40K Per Month
+Date of Recruitment: 20 October 2025
+Eligibility: 60% in SSC & Inter, UG 6.5 CGPA and above, No Active Backlogs. Branches: CSE / IT, CSE (AI & ML), CSE (DS), CSE (CS), CSIT.
+Process: Online Assessment (Technical MCQs + Coding), 2 Technical Interviews, HR Interview.
+Responsibilities: 
+- Data Analyst: SQL, Python/R, Google Sheets, Looker Studio, Metabase, R Shiny.
+- Quality Engineer: Automated/manual test suites, mobile platforms (Android/iOS), API testing (Postman).""",
+        metadata={"company": "Namma Yatri", "batch": "2026", "min_salary": 9.0, "max_salary": 10.0}
+    )
+]
+
+# 2. Vector Store Setup
+embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+vector_store = Chroma.from_documents(
+    documents=placement_docs,
+    embedding=embeddings,
+    collection_name="iare_placements"
+)
+
+# 3. Define RAG Retrieval Tool
+@tool
+def search_placement_drives(query: str) -> str:
+    """Useful to search for IARE campus placement drives, company criteria, eligibility, dates, stipends, and packages."""
+    docs = vector_store.similarity_search(query, k=4)
+    return "\n\n---\n\n".join([doc.page_content for doc in docs])
+
+tools = [search_placement_drives]
+
+# 4. Agent Configuration
+llm = ChatGoogleGenerativeAI(model="gemini-1.5-pro", temperature=0)
+
+prompt = ChatPromptTemplate.from_messages([
+    ("system", "You are the official IARE Campus Placement AI Agent. Use the `search_placement_drives` tool to retrieve factual placement details before answering. Be precise regarding eligibility (CGPA, backlogs, branch), CTC, dates, and interview stages."),
+    ("human", "{input}"),
+    ("placeholder", "{agent_scratchpad}"),
+])
+
+agent = create_tool_calling_agent(llm, tools, prompt)
+agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
+
+# 5. Execute Test Queries
+if __name__ == "__main__":
+    queries = [
+        "What companies are hiring the 2027 batch and what are their CGPA cutoffs?",
+        "I am interested in Data Analyst and Hardware roles. What options are available and what are their salaries?",
+        "Which drives require zero active backlogs and offer 10 LPA or more?"
+    ]
+    for q in queries:
+        print(f"\nUser Query: {q}")
+        result = agent_executor.invoke({"input": q})
+        print(f"Agent Output:\n{result['output']}\n" + "="*50)
