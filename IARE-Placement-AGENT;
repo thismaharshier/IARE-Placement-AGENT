@@ -1,0 +1,9 @@
+IARE-Placement-AGENT/
+│
+├── api/
+│   └── index.py          # The Python backend (FastAPI + LangChain)
+├── public/
+│   └── index.html        # The Web Page UI
+├── requirements.txt      # Python dependencies
+└── vercel.json           # Vercel configuration
+
